@@ -15,7 +15,8 @@ def read_tensorboard(
         )
 
     files = glob.glob(
-        str(path_read / f"trial_{trial_number}" / "events.out.tfevents.*")
+        str(path_read) + f"/trial_{trial_number}/**/events.out.tfevents.*",
+        recursive=True,
     )
 
     vec_steps = []
