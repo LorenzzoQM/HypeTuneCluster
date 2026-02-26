@@ -3,7 +3,7 @@ from hypeTune.fileHandling.read_output import read_tensorboard
 from hypeTune.jobs import local, slurm
 import numpy as np
 import logging
-from typing import Union
+from typing import Union, Callable
 import pathlib
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def run_case(
     trial_number: int,
     params: dict,
-    eval_function: callable[[Union[list, np.ndarray], Union[list, np.ndarray]], float],
+    eval_function: Callable[[Union[list, np.ndarray], Union[list, np.ndarray]], float],
     path_write: pathlib.Path,
     path_read: pathlib.Path,
     path_script: pathlib.Path,
