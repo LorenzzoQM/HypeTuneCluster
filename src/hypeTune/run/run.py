@@ -1,7 +1,6 @@
 from hypeTune.fileHandling.write_config import write_config
 from hypeTune.fileHandling.read_output import read_tensorboard
-from hypeTune.jobSubmission.submit_job import submit_job
-from hypeTune.jobSubmission.monitor_job import monitor_job
+from hypeTune.jobs import local, slurm
 import numpy as np
 import logging
 from typing import Union
@@ -18,11 +17,17 @@ def run_case(
     path_read: pathlib.Path,
     path_script: pathlib.Path,
     read_metric: str,
+    path_venv: pathlib.Path | None = None,
+    time_limit: int | None = None,
 ):
 
     write_config(trial_number, params, path_write)
-    job_id = submit_job(trial_number, path_script)
-    monitor_job(job_id, time_limit=300)
+    if path_venv is None:
+        job_id = slurm.submit_job(trial_number, path_script)
+        slurm.monitor_job(job_id, time_limit=time_limit)
+    else:
+        job_id = local.submit_job(trial_number, path_venv, path_script)
+        local.monitor_job(job_id, time_limit=time_limit)
     steps, values = read_tensorboard(trial_number, path_read, read_metric)
     val = eval_function(steps, values)
     logger.debug(f"Trial {trial_number} ended with reward: {val}")
