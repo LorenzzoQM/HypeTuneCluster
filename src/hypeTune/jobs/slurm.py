@@ -19,16 +19,36 @@ def monitor_job(
     job_id: int, time_limit: int | None = None, poll_interval: float = 10.0
 ) -> int:
     start_time = time.time()
+
+    # -j: job ID
+    # -X: Show only the main job allocation (ignores sub-steps like .batch or .extern)
+    # -n: No header
+    # -o State: Output only the job state
+    command = ["sacct", "-j", str(job_id), "-X", "-n", "-o", "State"]
+
     while True:
-        command = f"squeue -j {job_id} -h -o '%T'"
-        status = subprocess.check_output(command, shell=True, text=True).strip()
+        try:
+            output = subprocess.check_output(command, text=True).strip()
+
+            # If the output is totally empty, Slurm's accounting database
+            # might not have registered the job yet. We default to UNKNOWN.
+            status = output.split()[0] if output else "UNKNOWN"
+
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Failed to query job {job_id}: {e}")
+            status = "UNKNOWN"
+
         if status == "COMPLETED":
             logger.info(f"Job {job_id} completed successfully.")
             return 0
-        elif status in ["FAILED", "CANCELLED"]:
-            logger.error(f"Job {job_id} failed with status: {status}")
+        elif status in ["FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL"]:
+            logger.info(f"Job {job_id} terminated with status: {status}")
             return 1
+
         if time_limit is not None and time.time() - start_time > time_limit:
-            logger.warning(f"Job {job_id} exceeded time limit of {time_limit} seconds.")
+            logger.warning(
+                f"Job {job_id} exceeded time limit of {time_limit} seconds (including queue time)."
+            )
             return 2
+
         time.sleep(poll_interval)
