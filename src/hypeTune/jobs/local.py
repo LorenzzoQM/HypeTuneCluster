@@ -17,12 +17,15 @@ def submit_job(
         str(path_run),
         f"--trial-number={trial_number}",
     ]
-    logger.info("Submitting job with command: %s", cmd)
+    logger.info(f"Submitting job with command: {cmd}")
     process = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
     _LOCAL_PROCESSES[process.pid] = process
-    logger.info("Job submitted successfully with PID %d.", process.pid)
+    logger.info(
+        f"Job submitted successfully with PID {process.pid}.",
+        extra={"time": time.time()},
+    )
     return process.pid
 
 
@@ -49,25 +52,33 @@ def monitor_job(
                 stdout, stderr = process.communicate()
                 _LOCAL_PROCESSES.pop(job_pid, None)
                 if return_code == 0:
-                    logger.info("Job PID %d completed successfully.", job_pid)
+                    logger.info(
+                        f"Job PID {job_pid} completed successfully.",
+                        extra={"time": time.time()},
+                    )
                     if stdout:
-                        logger.debug("Job PID %d stdout: %s", job_pid, stdout.strip())
+                        logger.debug(
+                            f"Job PID {job_pid} stdout: {stdout.strip()}",
+                            extra={"time": time.time()},
+                        )
                     return 0
                 logger.error(
-                    "Job PID %d failed (exit %d): %s",
-                    job_pid,
-                    return_code,
-                    stderr.strip(),
+                    f"Job PID {job_pid} failed (exit {return_code}): {stderr.strip()}",
+                    extra={"time": time.time()},
                 )
                 return 1
         else:
             if not _is_pid_alive(job_pid):
-                logger.info("Job PID %d is no longer running.", job_pid)
+                logger.info(
+                    f"Job PID {job_pid} is no longer running.",
+                    extra={"time": time.time()},
+                )
                 return 0
 
         if time_limit is not None and time.time() - start_time > time_limit:
             logger.warning(
-                "Job PID %d exceeded time limit of %d seconds.", job_pid, time_limit
+                f"Job PID {job_pid} exceeded time limit of {time_limit} seconds.",
+                extra={"time": time.time()},
             )
             kill_job(job_pid)
             return 2
@@ -85,11 +96,13 @@ def kill_job(job_pid: int, kill_grace_seconds: float = 5.0) -> None:
         process.terminate()
         try:
             process.wait(timeout=kill_grace_seconds)
-            logger.info("Terminated job PID %d.", job_pid)
+            logger.info(f"Terminated job PID {job_pid}.", extra={"time": time.time()})
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=kill_grace_seconds)
-            logger.warning("Killed job PID %d after timeout.", job_pid)
+            logger.warning(
+                f"Killed job PID {job_pid} after timeout.", extra={"time": time.time()}
+            )
         finally:
             _LOCAL_PROCESSES.pop(job_pid, None)
         return
@@ -101,8 +114,10 @@ def kill_job(job_pid: int, kill_grace_seconds: float = 5.0) -> None:
     deadline = time.time() + kill_grace_seconds
     while time.time() < deadline:
         if not _is_pid_alive(job_pid):
-            logger.info("Terminated job PID %d.", job_pid)
+            logger.info(f"Terminated job PID {job_pid}.", extra={"time": time.time()})
             return
         time.sleep(0.2)
     os.kill(job_pid, signal.SIGKILL)
-    logger.warning("Killed job PID %d after timeout.", job_pid)
+    logger.warning(
+        f"Killed job PID {job_pid} after timeout.", extra={"time": time.time()}
+    )

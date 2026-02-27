@@ -11,7 +11,10 @@ def submit_job(trial_number: int, path_run: pathlib.Path) -> int:
     command = ["sbatch", path_run.as_posix(), str(trial_number)]
     out = subprocess.check_output(command, text=True).strip()
     job_id = int(out.split()[-1])
-    logger.info(f"Submitted job with ID {job_id} for trial {trial_number}")
+    logger.info(
+        f"Submitted job with ID {job_id}",
+        extra={"time": time.time(), "iteration": trial_number},
+    )
     return job_id
 
 
@@ -35,19 +38,27 @@ def monitor_job(
             status = output.split()[0] if output else "UNKNOWN"
 
         except subprocess.CalledProcessError as e:
-            logger.warning(f"Failed to query job {job_id}: {e}")
+            logger.warning(
+                f"Failed to query job {job_id}: {e}", extra={"time": time.time()}
+            )
             status = "UNKNOWN"
 
         if status == "COMPLETED":
-            logger.info(f"Job {job_id} completed successfully.")
+            logger.info(
+                f"Job {job_id} completed successfully.", extra={"time": time.time()}
+            )
             return 0
         elif status in ["FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL"]:
-            logger.info(f"Job {job_id} terminated with status: {status}")
+            logger.info(
+                f"Job {job_id} terminated with status: {status}",
+                extra={"time": time.time()},
+            )
             return 1
 
         if time_limit is not None and time.time() - start_time > time_limit:
             logger.warning(
-                f"Job {job_id} exceeded time limit of {time_limit} seconds (including queue time)."
+                f"Job {job_id} exceeded time limit of {time_limit} seconds (including queue time).",
+                extra={"time": time.time()},
             )
             return 2
 
