@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 def submit_job(trial_number: int, path_run: pathlib.Path) -> int:
 
-    command = f"sbatch {path_run.as_posix()} {trial_number}"
-    out = subprocess.check_output(command, shell=True, text=True).strip()
+    command = ["sbatch", path_run.as_posix(), str(trial_number)]
+    out = subprocess.check_output(command, text=True).strip()
     job_id = int(out.split()[-1])
     logger.info(f"Submitted job with ID {job_id} for trial {trial_number}")
     return job_id
