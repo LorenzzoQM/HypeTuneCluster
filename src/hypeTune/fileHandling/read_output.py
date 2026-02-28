@@ -26,10 +26,13 @@ def read_tensorboard(
         event_acc = EventAccumulator(file)
         event_acc.Reload()
 
-        scalar_list = event_acc.Scalars(value_parameter)
-        for scalar in scalar_list:
-            vec_steps.append(scalar.step)
-            vec_values.append(scalar.value)
+        try:
+            scalar_list = event_acc.Scalars(value_parameter)
+            for scalar in scalar_list:
+                vec_steps.append(scalar.step)
+                vec_values.append(scalar.value)
+        except KeyError:
+            continue
 
     ordered_steps = sorted(vec_steps)
     ordered_values = [x for _, x in sorted(zip(vec_steps, vec_values))]
