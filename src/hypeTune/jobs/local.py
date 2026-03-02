@@ -4,6 +4,7 @@ import pathlib
 import time
 import signal
 import os
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 _LOCAL_PROCESSES: dict[int, subprocess.Popen[str]] = {}
@@ -40,7 +41,10 @@ def _is_pid_alive(pid: int) -> bool:
 
 
 def monitor_job(
-    job_pid: int, time_limit: int | None = None, poll_interval: float = 10.0
+    job_pid: int,
+    time_limit: int | None = None,
+    poll_interval: float = 10.0,
+    callback: Callable[[int, float], None] | None = None,
 ) -> int:
     start_time = time.time()
     process = _LOCAL_PROCESSES.get(job_pid)
@@ -83,6 +87,14 @@ def monitor_job(
             kill_job(job_pid)
             return 2
 
+        if callback is not None:
+            try:
+                callback(job_pid, time.time() - start_time)
+            except Exception:
+                logger.warning(
+                    f"Failed to execute callback for job PID {job_pid}",
+                    extra={"time": time.time()},
+                )
         time.sleep(poll_interval)
 
 

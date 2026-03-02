@@ -19,15 +19,16 @@ def run_case(
     read_metric: str,
     path_venv: pathlib.Path | None = None,
     time_limit: int | None = None,
-):
+    callback: Callable[[int, float], None] | None = None,
+) -> float:
 
     write_config(trial_number, params, path_write)
     if path_venv is None:
         job_id = slurm.submit_job(trial_number, path_script)
-        slurm.monitor_job(job_id, time_limit=time_limit)
+        slurm.monitor_job(job_id, time_limit=time_limit, callback=callback)
     else:
         job_id = local.submit_job(trial_number, path_venv, path_script)
-        local.monitor_job(job_id, time_limit=time_limit)
+        local.monitor_job(job_id, time_limit=time_limit, callback=callback)
     steps, values = read_tensorboard(trial_number, path_read, read_metric)
     val = eval_function(steps, values)
     logger.debug(f"Trial {trial_number} ended with reward: {val}")

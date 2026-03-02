@@ -2,6 +2,7 @@ import subprocess
 import logging
 import pathlib
 import time
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,10 @@ def submit_job(trial_number: int, path_run: pathlib.Path) -> int:
 
 
 def monitor_job(
-    job_id: int, time_limit: int | None = None, poll_interval: float = 10.0
+    job_id: int,
+    time_limit: int | None = None,
+    poll_interval: float = 10.0,
+    callback: Callable[[int, float], None] | None = None,
 ) -> int:
     start_time = time.time()
 
@@ -62,4 +66,12 @@ def monitor_job(
             )
             return 2
 
+        if callback is not None:
+            try:
+                callback(job_id, time.time() - start_time)
+            except Exception:
+                logger.warning(
+                    f"Failed to execute callback for job ID {job_id}",
+                    extra={"time": time.time()},
+                )
         time.sleep(poll_interval)
