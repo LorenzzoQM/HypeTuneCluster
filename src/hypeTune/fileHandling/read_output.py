@@ -1,10 +1,11 @@
 import pathlib
 import glob
+from typing import Tuple
 
 
 def read_tensorboard(
     trial_number: int, path_read: pathlib.Path, value_parameter: str
-) -> (list, list):
+) -> Tuple[list, list]:
     try:
         from tensorboard.backend.event_processing.event_accumulator import (
             EventAccumulator,
