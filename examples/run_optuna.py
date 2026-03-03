@@ -2,12 +2,12 @@ import optuna
 from optuna.storages import JournalStorage
 from optuna.storages.journal import JournalFileBackend
 import numpy as np
-from hypeTune.run.main import run_case
+from hypeTune.run.run import run_case
 import pathlib
 import argparse
 import concurrent.futures
 import logging
-
+from hypeTune.fileHandling.read_output import read_tensorboard
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,20 @@ def run_one_case(trial):
     width = trial.suggest_int("width", 26, 38)
     trial_number = trial.number
     params = {"width": width}
+
+    def prune_callback(*args, **kwargs):
+        try:
+            steps, vals = read_tensorboard(
+                trial_number, pathlib.Path("./logs"), "reward"
+            )
+        except Exception:
+            return None
+        vals = objective(steps, vals)
+        trial.report(vals, step=steps[-1])
+
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+
     return run_case(
         trial_number,
         params,
@@ -32,6 +46,7 @@ def run_one_case(trial):
         path_read=pathlib.Path("./logs"),
         path_script=pathlib.Path("./run_script.sh"),
         read_metric="reward",
+        callback=prune_callback,
     )
 
 
@@ -41,6 +56,7 @@ def individual_thread():
         storage=JournalStorage(JournalFileBackend(file_path="./Test.log")),
         load_if_exists=True,
         direction="maximize",
+        pruner=optuna.pruners.HyperbandPruner(),
     )
 
     study.optimize(run_one_case, n_trials=1)
