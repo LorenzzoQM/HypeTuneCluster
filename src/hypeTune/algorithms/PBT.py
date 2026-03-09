@@ -39,6 +39,7 @@ class PBT:
         population_size: int,
         upper_percentile: float,
         lower_percentile: float,
+        minimum_trials: int = 0,
         total_trials: int | None = None,
         always_perturb: bool = False,
     ):
@@ -49,12 +50,17 @@ class PBT:
         self.lower_percentile = lower_percentile
         self.total_trials = total_trials
         self.always_perturb = always_perturb
+        assert (
+            minimum_trials <= population_size and minimum_trials >= 0
+        ), "Minimum trials must be less than or equal to population size."
+        self.minimum_trials = minimum_trials
 
         self._initialize()
 
     def _initialize(self):
         self.set_of_trials = dict()
         self.set_of_ongoing_trials = set()
+        self.set_of_queued_trials = set()
 
     def _sample_hyperparameters(self) -> dict[str, float]:
         hype_params = dict()
@@ -155,39 +161,63 @@ class PBT:
             trial.start_time = start_time
         trial.end_time = end_time
 
-        if (
-            self.total_trials is None
-            or len(self.set_of_trials.keys()) < self.total_trials
-        ):
-            trial_to_exploit = self._exploit(trial)
-            exploited = trial_to_exploit != trial_number
-            if trial_to_exploit == trial_number and not self.always_perturb:
-                new_hyperparameters = self.set_of_trials[
-                    trial_number
-                ].hyperparameters.copy()
-            else:
-                new_hyperparameters = self._perturb(
-                    self.set_of_trials[trial_to_exploit].hyperparameters
-                )
-            new_trial_number = len(self.set_of_trials.keys())
-            new_trial = Trial(
-                trial_number=new_trial_number,
-                hyperparameters=new_hyperparameters,
-                performance=0.0,
-                parent_trial=trial_to_exploit,
-                exploited=exploited,
-                start_step=end_step,
-                start_time=end_time,
-            )
-            self.set_of_trials[new_trial_number] = new_trial
-            self.set_of_ongoing_trials.add(new_trial_number)
-
+        self.set_of_queued_trials.add(trial_number)
         self.set_of_ongoing_trials.remove(trial_number)
+
+    def get_new_trials(self) -> list[Trial]:
+
+        if len(self.set_of_trials.keys()) == 0:
+            return self.get_initial_trials()
+
+        completed_trials = len([t for t in self.set_of_trials.values() if t.finished])
+        list_new_trials = []
+
+        if completed_trials >= self.minimum_trials:
+
+            queued_trials = self.set_of_queued_trials.copy()
+            for trial_number in queued_trials:
+                trial = self.set_of_trials[trial_number]
+
+                if (
+                    self.total_trials is None
+                    or len(self.set_of_trials.keys()) < self.total_trials
+                ):
+                    trial_to_exploit = self._exploit(trial)
+                    exploited = trial_to_exploit != trial_number
+                    if trial_to_exploit == trial_number and not self.always_perturb:
+                        new_hyperparameters = self.set_of_trials[
+                            trial_number
+                        ].hyperparameters.copy()
+                    else:
+                        new_hyperparameters = self._perturb(
+                            self.set_of_trials[trial_to_exploit].hyperparameters
+                        )
+                    new_trial_number = len(self.set_of_trials.keys())
+                    new_trial = Trial(
+                        trial_number=new_trial_number,
+                        hyperparameters=new_hyperparameters,
+                        performance=0.0,
+                        parent_trial=trial_to_exploit,
+                        exploited=exploited,
+                        start_step=trial.end_step,
+                        start_time=trial.end_time,
+                    )
+                    self.set_of_trials[new_trial_number] = new_trial
+                    self.set_of_ongoing_trials.add(new_trial_number)
+                    self.set_of_queued_trials.remove(trial_number)
+                    list_new_trials.append(new_trial)
+
+        else:
+            logger.info(
+                f"Minimum trials not reached yet. Completed trials: {completed_trials}. Minimum trials: {self.minimum_trials}."
+            )
 
         if len(self.set_of_ongoing_trials) != self.population_size:
             logger.warning(
                 f"Number of ongoing trials {len(self.set_of_ongoing_trials)} is not equal to population size {self.population_size}."
             )
+
+        return list_new_trials
 
     def get_ongoing_trials(self) -> list[Trial]:
         return [self.set_of_trials[i] for i in self.set_of_ongoing_trials]
