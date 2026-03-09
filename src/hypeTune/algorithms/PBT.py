@@ -89,9 +89,13 @@ class PBT:
             else:
                 decrease = np.random.normal() > 0.5
                 if decrease:
-                    hyper_perturbed[hyper.name] = hyper_value * perturb_range[0]
+                    hyper_val_new = hyper_value * perturb_range[0]
                 else:
-                    hyper_perturbed[hyper.name] = hyper_value * perturb_range[1]
+                    hyper_val_new = hyper_value * perturb_range[1]
+
+                hyper_perturbed[hyper.name] = np.clip(
+                    hyper_val_new, hyper.values[0], hyper.values[1]
+                )
 
         return hyper_perturbed
 
