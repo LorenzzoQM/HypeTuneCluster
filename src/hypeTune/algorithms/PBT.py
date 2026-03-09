@@ -232,6 +232,71 @@ class PBT:
             if t.finished
         ]
 
+    def get_trial_sequence(self, trial, sequence_list=[]) -> float:
+        """
+        Returns the root node of the trial and the sequence of trials leading to the given trial.
+        If passing an empty list as sequence_list, it will be populated with the sequence of trials leading to the given trial.
+        """
+        if trial.parent_trial is None:
+            sequence_list.append(trial.trial_number)
+            return trial.trial_number
+        else:
+            sequence_list.append(trial.trial_number)
+            return self.get_trial_sequence(
+                self.set_of_trials[trial.parent_trial], sequence_list
+            )
+
+    def get_schedule(
+        self, trial_number: int
+    ) -> dict[str, list[tuple[int, int, float, float, float]]]:
+        """
+        Returns a dictionary with the schedule of hyperparameters for a given trial number.
+
+        The schedule is a list of tuples containing the start step, end step, start time, end time, and
+        hyperparameter value for each hyperparameter in the sequence of trials leading to the given trial number.
+        """
+        trial = self.set_of_trials[trial_number]
+        sequence_list = []
+        _ = self.get_trial_sequence(trial, sequence_list)
+
+        dict_schedule = dict()
+        for hyper in self.hyperparameters:
+            dict_schedule[hyper.name] = []
+            for trial_i_number in sequence_list[::-1]:
+                trial_i = self.set_of_trials[trial_i_number]
+                dict_schedule[hyper.name].append(
+                    (
+                        trial_i.start_step,
+                        trial_i.end_step,
+                        trial_i.start_time,
+                        trial_i.end_time,
+                        trial_i.hyperparameters[hyper.name],
+                    )
+                )
+        dict_schedule["performance"] = []
+        for trial_i_number in sequence_list[::-1]:
+            trial_i = self.set_of_trials[trial_i_number]
+            dict_schedule["performance"].append(
+                (
+                    trial_i.start_step,
+                    trial_i.end_step,
+                    trial_i.start_time,
+                    trial_i.end_time,
+                    trial_i.performance,
+                )
+            )
+
+        return dict_schedule
+
+    def get_best_trial(self) -> Trial | None:
+        finished_trials = [t for t in self.set_of_trials.values() if t.finished]
+        if len(finished_trials) > 0:
+            best_trial = max(finished_trials, key=lambda t: t.performance)
+            return best_trial
+        else:
+            logger.info("No finished trials yet. Cannot get best trial.")
+            return None
+
     def to_json(self, path: Path):
         import json
 
