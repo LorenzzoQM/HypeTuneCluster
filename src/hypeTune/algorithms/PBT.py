@@ -155,30 +155,32 @@ class PBT:
             trial.start_time = start_time
         trial.end_time = end_time
 
-        if self.total_trials is not None:
-            if len(self.set_of_trials.keys()) < self.total_trials:
-                trial_to_exploit = self._exploit(trial)
-                exploited = trial_to_exploit != trial_number
-                if trial_to_exploit == trial_number and not self.always_perturb:
-                    new_hyperparameters = self.set_of_trials[
-                        trial_number
-                    ].hyperparameters.copy()
-                else:
-                    new_hyperparameters = self._perturb(
-                        self.set_of_trials[trial_to_exploit].hyperparameters
-                    )
-                new_trial_number = len(self.set_of_trials.keys())
-                new_trial = Trial(
-                    trial_number=new_trial_number,
-                    hyperparameters=new_hyperparameters,
-                    performance=0.0,
-                    parent_trial=trial_to_exploit,
-                    exploited=exploited,
-                    start_step=end_step,
-                    start_time=end_time,
+        if (
+            self.total_trials is None
+            or len(self.set_of_trials.keys()) < self.total_trials
+        ):
+            trial_to_exploit = self._exploit(trial)
+            exploited = trial_to_exploit != trial_number
+            if trial_to_exploit == trial_number and not self.always_perturb:
+                new_hyperparameters = self.set_of_trials[
+                    trial_number
+                ].hyperparameters.copy()
+            else:
+                new_hyperparameters = self._perturb(
+                    self.set_of_trials[trial_to_exploit].hyperparameters
                 )
-                self.set_of_trials[new_trial_number] = new_trial
-                self.set_of_ongoing_trials.add(new_trial_number)
+            new_trial_number = len(self.set_of_trials.keys())
+            new_trial = Trial(
+                trial_number=new_trial_number,
+                hyperparameters=new_hyperparameters,
+                performance=0.0,
+                parent_trial=trial_to_exploit,
+                exploited=exploited,
+                start_step=end_step,
+                start_time=end_time,
+            )
+            self.set_of_trials[new_trial_number] = new_trial
+            self.set_of_ongoing_trials.add(new_trial_number)
 
         self.set_of_ongoing_trials.remove(trial_number)
 
