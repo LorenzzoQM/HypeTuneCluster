@@ -3,6 +3,7 @@ import numpy as np
 from typing import Callable
 import logging
 from pathlib import Path
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,10 @@ class Trial:
     parent_trial: int | None = None
     finished: bool = False
     exploited: bool = False
+    start_step: int | None = None
+    start_time: float | None = None
+    end_step: int | None = None
+    end_time: float | None = None
 
 
 class PBT:
@@ -123,16 +128,32 @@ class PBT:
     def get_initial_trials(self) -> list[Trial]:
         for i in range(self.population_size):
             hype_params = self._sample_hyperparameters()
-            trial_i = Trial(trial_number=i, hyperparameters=hype_params)
+            trial_i = Trial(
+                trial_number=i,
+                hyperparameters=hype_params,
+                start_step=0,
+                start_time=time.time(),
+            )
             self.set_of_trials[i] = trial_i
             self.set_of_ongoing_trials.add(i)
 
         return self.get_ongoing_trials()
 
-    def update_trial(self, trial_number: int, performance: float):
+    def update_trial(
+        self,
+        trial_number: int,
+        performance: float,
+        end_step: int | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
+    ) -> None:
         trial = self.set_of_trials[trial_number]
         trial.performance = performance
         trial.finished = True
+        trial.end_step = end_step
+        if start_time is not None:
+            trial.start_time = start_time
+        trial.end_time = end_time
 
         if self.total_trials is not None:
             if len(self.set_of_trials.keys()) < self.total_trials:
@@ -153,6 +174,8 @@ class PBT:
                     performance=0.0,
                     parent_trial=trial_to_exploit,
                     exploited=exploited,
+                    start_step=end_step,
+                    start_time=end_time,
                 )
                 self.set_of_trials[new_trial_number] = new_trial
                 self.set_of_ongoing_trials.add(new_trial_number)
