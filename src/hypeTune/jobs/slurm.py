@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def submit_job(trial_number: int, path_run: pathlib.Path) -> int:
-
+    """Submit a trial job through Slurm."""
     command = ["sbatch", path_run.as_posix(), str(trial_number)]
     out = subprocess.check_output(command, text=True).strip()
     job_id = int(out.split()[-1])
@@ -25,6 +25,7 @@ def monitor_job(
     poll_interval: float = 10.0,
     callback: Callable[[int, float], None] | None = None,
 ) -> int:
+    """Poll Slurm until completion, failure, or timeout."""
     start_time = time.time()
 
     # -j: job ID

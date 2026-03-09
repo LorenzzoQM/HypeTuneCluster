@@ -21,7 +21,7 @@ def run_case(
     time_limit: int | None = None,
     callback: Callable[[int, float], None] | None = None,
 ) -> float:
-
+    """Run one trial; setting `path_venv` uses local PID-based execution."""
     write_config(trial_number, params, path_write)
     if path_venv is None:
         job_id = slurm.submit_job(trial_number, path_script)

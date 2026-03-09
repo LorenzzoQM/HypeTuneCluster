@@ -13,6 +13,7 @@ _LOCAL_PROCESSES: dict[int, subprocess.Popen[str]] = {}
 def submit_job(
     trial_number: int, path_venv: pathlib.Path, path_run: pathlib.Path
 ) -> int:
+    """Start a local trial process and return its PID."""
     cmd = [
         str(path_venv / "bin" / "python"),
         str(path_run),
@@ -31,6 +32,7 @@ def submit_job(
 
 
 def _is_pid_alive(pid: int) -> bool:
+    """Check whether a PID is still alive."""
     try:
         os.kill(pid, 0)
         return True
@@ -46,6 +48,7 @@ def monitor_job(
     poll_interval: float = 10.0,
     callback: Callable[[int, float], None] | None = None,
 ) -> int:
+    """Poll a local job until completion, failure, or timeout."""
     start_time = time.time()
     process = _LOCAL_PROCESSES.get(job_pid)
 
@@ -99,6 +102,7 @@ def monitor_job(
 
 
 def kill_job(job_pid: int, kill_grace_seconds: float = 5.0) -> None:
+    """Terminate a local job, escalating to SIGKILL if needed."""
     process = _LOCAL_PROCESSES.get(job_pid)
 
     if process is not None:

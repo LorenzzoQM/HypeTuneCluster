@@ -42,6 +42,7 @@ def style_string(
     emph=False,
     underline=False,
 ):
+    """Apply ANSI styling to a string."""
     if no_format:
         return string
 
@@ -68,6 +69,7 @@ def style_string(
 
 class SimFormatter(logging.Formatter):
     def __init__(self, *args, **kwargs):
+        """Initialize formatter state."""
         super().__init__(
             *args,
             **kwargs,
@@ -76,10 +78,12 @@ class SimFormatter(logging.Formatter):
         self.satellite_colors = {}
 
     def set_format(self, fmt, defaults=None, style="%"):
+        """Set the active format string."""
         self._style = logging._STYLES[style][0](fmt, defaults=defaults)
         self._fmt = self._style._fmt
 
     def format(self, record):
+        """Format a log record with colored fields."""
         fstr = ""
         fstr += style_string("%(asctime)s ", color="GRAY", emph=True)
 
@@ -114,6 +118,7 @@ class SimFormatter(logging.Formatter):
 
 
 def setup_logger(logger_level=logging.INFO):
+    """Configure and attach the hypeTune stream logger."""
     logger = logging.getLogger("hypetune")
     logger.setLevel(logger_level)
     ch = logging.StreamHandler()

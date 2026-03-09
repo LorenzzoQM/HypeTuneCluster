@@ -6,6 +6,7 @@ from typing import Tuple
 def read_tensorboard(
     trial_number: int, path_read: pathlib.Path, value_parameter: str
 ) -> Tuple[list, list]:
+    """Read scalar steps and values from TensorBoard logs."""
     try:
         from tensorboard.backend.event_processing.event_accumulator import (
             EventAccumulator,

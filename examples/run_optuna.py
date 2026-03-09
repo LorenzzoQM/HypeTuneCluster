@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def objective(steps, vals):
+    """Score a trial from logged values."""
     if len(vals) < 10:
         return np.mean(vals)
     else:
@@ -20,12 +21,13 @@ def objective(steps, vals):
 
 
 def run_one_case(trial):
-
+    """Sample parameters and run a single trial."""
     width = trial.suggest_int("width", 26, 38)
     trial_number = trial.number
     params = {"width": width}
 
     def prune_callback(*args, **kwargs):
+        """Report intermediate metrics for pruning."""
         try:
             steps, vals = read_tensorboard(
                 trial_number, pathlib.Path("./logs"), "reward"
@@ -51,6 +53,7 @@ def run_one_case(trial):
 
 
 def individual_thread():
+    """Run one optimization step in its own study worker."""
     study = optuna.create_study(
         study_name="Test",
         storage=JournalStorage(JournalFileBackend(file_path="./Test.log")),
@@ -63,6 +66,7 @@ def individual_thread():
 
 
 def run_trials(total_cases: int, max_concurrent: int) -> None:
+    """Run multiple trials with bounded concurrency."""
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrent) as executor:
         futures = [executor.submit(individual_thread) for _ in range(total_cases)]
         for idx, future in enumerate(concurrent.futures.as_completed(futures), start=1):
