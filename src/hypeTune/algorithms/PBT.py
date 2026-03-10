@@ -32,6 +32,9 @@ class Trial:
 
 
 class PBT:
+    """
+    Method based on the paper "Population Based Training of Neural Networks" by Jaderberg et al. (https://arxiv.org/abs/1711.09846).
+    """
 
     def __init__(
         self,
@@ -43,6 +46,15 @@ class PBT:
         total_trials: int | None = None,
         always_perturb: bool = False,
     ):
+        """
+        Args:
+            population_size: number of trials to run in parallel
+            upper_percentile: percentile of trials to consider as "good" for exploitation
+            lower_percentile: percentile of trials to consider as "bad" for exploitation
+            total_trials: total number of trials to run (if None, will run indefinitely)
+            minimum_trials: minimum number of trials to complete before starting exploitation
+            always_perturb: whether to always perturb the hyperparameters of the exploited trial (even if it is not in the lower percentile) or only perturb if the trial is in the lower percentile
+        """
 
         self.hyperparameters = hyperparameters
         self.population_size = population_size
