@@ -354,6 +354,11 @@ class PBT:
                             "performance": trial.performance,
                             "parent_trial": trial.parent_trial,
                             "finished": trial.finished,
+                            "exploited": trial.exploited,
+                            "start_step": trial.start_step,
+                            "start_time": trial.start_time,
+                            "end_step": trial.end_step,
+                            "end_time": trial.end_time,
                         }
                         for trial in self.set_of_trials.values()
                     ],
@@ -390,6 +395,11 @@ class PBT:
                 performance=trial_data["performance"],
                 parent_trial=trial_data["parent_trial"],
                 finished=trial_data["finished"],
+                exploited=trial_data["exploited"],
+                start_step=trial_data["start_step"],
+                start_time=trial_data["start_time"],
+                end_step=trial_data["end_step"],
+                end_time=trial_data["end_time"],
             )
             self.set_of_trials[trial_i.trial_number] = trial_i
 
