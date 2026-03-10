@@ -101,13 +101,14 @@ class PBT:
             hyper_value = hyper_prior[hyper.name]
             perturb_range = hyper.perturbation_range
             if hyper.log_space:
-                hyper_val_new = 10 ** np.random.uniform(
-                    np.log10(hyper_value) + np.log10(perturb_range[0]),
-                    np.log10(hyper_value) + np.log10(perturb_range[1]),
-                )
+                decrease = np.random.normal() > 0.0
+                if decrease:
+                    hyper_val_new = perturb_range[0] * np.log10(hyper_value)
+                else:
+                    hyper_val_new = perturb_range[1] * np.log10(hyper_value)
 
                 hyper_perturbed[hyper.name] = np.clip(
-                    hyper_val_new, hyper.values[0], hyper.values[1]
+                    10**hyper_val_new, hyper.values[0], hyper.values[1]
                 )
             else:
                 decrease = np.random.normal() > 0.0
