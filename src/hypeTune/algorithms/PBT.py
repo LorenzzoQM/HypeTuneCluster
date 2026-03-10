@@ -4,6 +4,7 @@ from typing import Callable
 import logging
 from pathlib import Path
 import time
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -327,6 +328,8 @@ class PBT:
 
     def to_json(self, path: Path):
         import json
+
+        os.makedirs(path.parent, exist_ok=True)
 
         with open(path, "w") as f:
             json.dump(
