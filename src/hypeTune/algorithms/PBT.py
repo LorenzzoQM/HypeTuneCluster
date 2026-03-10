@@ -81,8 +81,12 @@ class PBT:
                 hype_params[hyper.name] = hyper.distribution()
             else:
                 if hyper.log_space:
-                    # TODO: implement log space sampling (and inverse log space sampling for mutation)
-                    pass
+                    assert (
+                        hyper.values[0] > 0 and hyper.values[1] > 0
+                    ), "Log space hyperparameters must have positive values."
+                    hype_params[hyper.name] = 10 ** np.random.uniform(
+                        np.log10(hyper.values[0]), np.log10(hyper.values[1])
+                    )
                 else:
                     hype_params[hyper.name] = np.random.uniform(
                         hyper.values[0], hyper.values[1]
@@ -97,7 +101,14 @@ class PBT:
             hyper_value = hyper_prior[hyper.name]
             perturb_range = hyper.perturbation_range
             if hyper.log_space:
-                pass
+                hyper_val_new = 10 ** np.random.uniform(
+                    np.log10(hyper_value) + np.log10(perturb_range[0]),
+                    np.log10(hyper_value) + np.log10(perturb_range[1]),
+                )
+
+                hyper_perturbed[hyper.name] = np.clip(
+                    hyper_val_new, hyper.values[0], hyper.values[1]
+                )
             else:
                 decrease = np.random.normal() > 0.5
                 if decrease:
