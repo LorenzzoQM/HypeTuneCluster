@@ -110,7 +110,7 @@ class PBT:
                     hyper_val_new, hyper.values[0], hyper.values[1]
                 )
             else:
-                decrease = np.random.normal() > 0.5
+                decrease = np.random.normal() > 0.0
                 if decrease:
                     hyper_val_new = hyper_value * perturb_range[0]
                 else:
