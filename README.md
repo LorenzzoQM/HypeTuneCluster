@@ -151,3 +151,25 @@ To inspect results while jobs are running:
 - inspect generated configs under `configs/`
 - point TensorBoard at the corresponding log directory
 - check Slurm state with `sacct` or `squeue`
+
+## Development
+
+This repo uses `ruff` for linting and formatting. To make local checks simpler, use
+`pre-commit`, which is already configured in
+`.pre-commit-config.yaml`.
+
+Install and enable it with:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+To run the configured checks manually across the whole repo:
+
+```bash
+pre-commit run --all-files
+```
+
+The current hooks run `ruff --fix` and `ruff format`, so most style issues are fixed
+automatically before commit.
