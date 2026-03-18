@@ -46,6 +46,7 @@ class PBT:
         minimum_trials: int = 0,
         total_trials: int | None = None,
         always_perturb: bool = False,
+        epsilon_resample: float = 0.0,
     ):
         """
         Args:
@@ -55,6 +56,7 @@ class PBT:
             total_trials: total number of trials to run (if None, will run indefinitely)
             minimum_trials: minimum number of trials to complete before starting exploitation
             always_perturb: whether to always perturb the hyperparameters of the exploited trial (even if it is not in the lower percentile) or only perturb if the trial is in the lower percentile
+            epsilon_resample: probability of resampling hyperparameters instead of perturbing them
         """
 
         self.hyperparameters = hyperparameters
@@ -63,6 +65,9 @@ class PBT:
         self.lower_percentile = lower_percentile
         self.total_trials = total_trials
         self.always_perturb = always_perturb
+        if not 0.0 <= epsilon_resample <= 1.0:
+            raise ValueError("epsilon_resample must be between 0.0 and 1.0 inclusive.")
+        self.epsilon_resample = epsilon_resample
         assert (
             minimum_trials <= population_size and minimum_trials >= 0
         ), "Minimum trials must be less than or equal to population size."
@@ -98,6 +103,8 @@ class PBT:
     def _perturb(self, trial_hyperparameter: dict[str, float]) -> dict[str, float]:
         hyper_prior = trial_hyperparameter.copy()
         hyper_perturbed = dict()
+        if np.random.uniform() < self.epsilon_resample:
+            return self._sample_hyperparameters()
         for hyper in self.hyperparameters:
             hyper_value = hyper_prior[hyper.name]
             perturb_range = hyper.perturbation_range
@@ -194,7 +201,6 @@ class PBT:
         self.set_of_ongoing_trials.remove(trial_number)
 
     def get_new_trials(self) -> list[Trial]:
-
         if len(self.set_of_trials.keys()) == 0:
             return self.get_initial_trials()
 
@@ -202,7 +208,6 @@ class PBT:
         list_new_trials = []
 
         if completed_trials >= self.minimum_trials:
-
             queued_trials = self.set_of_queued_trials.copy()
             for trial_number in queued_trials:
                 trial = self.set_of_trials[trial_number]
@@ -346,6 +351,7 @@ class PBT:
                     "population_size": self.population_size,
                     "upper_percentile": self.upper_percentile,
                     "lower_percentile": self.lower_percentile,
+                    "epsilon_resample": self.epsilon_resample,
                     "total_trials": self.total_trials,
                     "trials": [
                         {
@@ -386,7 +392,7 @@ class PBT:
         self.upper_percentile = data["upper_percentile"]
         self.lower_percentile = data["lower_percentile"]
         self.total_trials = data["total_trials"]
-
+        self.epsilon_resample = data["epsilon_resample"]
         self.set_of_trials = dict()
         for trial_data in data["trials"]:
             trial_i = Trial(
