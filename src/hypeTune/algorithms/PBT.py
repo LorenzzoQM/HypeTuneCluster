@@ -43,6 +43,7 @@ class PBT:
         population_size: int,
         upper_percentile: float,
         lower_percentile: float,
+        upper_n_trials: int | None = None,
         minimum_trials: int = 0,
         total_trials: int | None = None,
         always_perturb: bool = False,
@@ -53,6 +54,7 @@ class PBT:
             population_size: number of trials to run in parallel
             upper_percentile: percentile of trials to consider as "good" for exploitation
             lower_percentile: percentile of trials to consider as "bad" for exploitation
+            upper_n_trials: If not None, select the minimum between the upper percentile and the top n trials as "good" for exploitation.
             total_trials: total number of trials to run (if None, will run indefinitely)
             minimum_trials: minimum number of trials to complete before starting exploitation
             always_perturb: whether to always perturb the hyperparameters of the exploited trial (even if it is not in the lower percentile) or only perturb if the trial is in the lower percentile
@@ -63,6 +65,12 @@ class PBT:
         self.population_size = population_size
         self.upper_percentile = upper_percentile
         self.lower_percentile = lower_percentile
+        if upper_n_trials is not None:
+            if not isinstance(upper_n_trials, int) or upper_n_trials < 1:
+                raise ValueError(
+                    "upper_n_trials must be None or a positive integer (>= 1)."
+                )
+        self.upper_n_trials = upper_n_trials
         self.total_trials = total_trials
         self.always_perturb = always_perturb
         if not 0.0 <= epsilon_resample <= 1.0:
@@ -153,6 +161,12 @@ class PBT:
 
             if performance < lower_threshold:
                 indexes = np.where(np.array(performances) > upper_threshold)[0]
+                if (
+                    self.upper_n_trials is not None
+                    and len(indexes) > self.upper_n_trials
+                ):
+                    sorted_indexes = np.argsort(np.array(performances)[indexes])
+                    indexes = indexes[np.array(sorted_indexes)[-self.upper_n_trials :]]
                 trial_to_copy = np.random.choice(indexes)
                 trial_to_copy_number = trials[trial_to_copy]
                 return trial_to_copy_number
@@ -351,6 +365,7 @@ class PBT:
                     "population_size": self.population_size,
                     "upper_percentile": self.upper_percentile,
                     "lower_percentile": self.lower_percentile,
+                    "upper_n_trials": self.upper_n_trials,
                     "epsilon_resample": self.epsilon_resample,
                     "total_trials": self.total_trials,
                     "trials": [
@@ -391,6 +406,7 @@ class PBT:
         self.population_size = data["population_size"]
         self.upper_percentile = data["upper_percentile"]
         self.lower_percentile = data["lower_percentile"]
+        self.upper_n_trials = data.get("upper_n_trials", None)
         self.total_trials = data["total_trials"]
         self.epsilon_resample = data["epsilon_resample"]
         self.set_of_trials = dict()
