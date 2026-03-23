@@ -48,6 +48,7 @@ class PBT:
         total_trials: int | None = None,
         always_perturb: bool = False,
         epsilon_resample: float = 0.0,
+        epsilon_resample_per_param: float = 0.0,
     ):
         """
         Args:
@@ -59,6 +60,7 @@ class PBT:
             minimum_trials: minimum number of trials to complete before starting exploitation
             always_perturb: whether to always perturb the hyperparameters of the exploited trial (even if it is not in the lower percentile) or only perturb if the trial is in the lower percentile
             epsilon_resample: probability of resampling hyperparameters instead of perturbing them
+            epsilon_resample_per_param: probability of resampling each hyperparameter instead of perturbing. Only occurs if the trial is being perturbed and not resampled.
         """
 
         self.hyperparameters = hyperparameters
@@ -76,11 +78,15 @@ class PBT:
         if not 0.0 <= epsilon_resample <= 1.0:
             raise ValueError("epsilon_resample must be between 0.0 and 1.0 inclusive.")
         self.epsilon_resample = epsilon_resample
+        if not 0.0 <= epsilon_resample_per_param <= 1.0:
+            raise ValueError(
+                "epsilon_resample_per_param must be between 0.0 and 1.0 inclusive."
+            )
+        self.epsilon_resample_per_param = epsilon_resample_per_param
         assert (
             minimum_trials <= population_size and minimum_trials >= 0
         ), "Minimum trials must be less than or equal to population size."
         self.minimum_trials = minimum_trials
-
         self._initialize()
 
     def _initialize(self):
@@ -113,9 +119,17 @@ class PBT:
         hyper_perturbed = dict()
         if np.random.uniform() < self.epsilon_resample:
             return self._sample_hyperparameters()
+        if self.epsilon_resample_per_param > 0.0:
+            hyper_sampled = self._sample_hyperparameters()
         for hyper in self.hyperparameters:
             hyper_value = hyper_prior[hyper.name]
             perturb_range = hyper.perturbation_range
+            if (
+                self.epsilon_resample_per_param > 0.0
+                and np.random.uniform() < self.epsilon_resample_per_param
+            ):
+                hyper_perturbed[hyper.name] = hyper_sampled[hyper.name]
+                continue
             if hyper.log_space:
                 decrease = np.random.normal() > 0.0
                 if decrease:
@@ -367,6 +381,7 @@ class PBT:
                     "lower_percentile": self.lower_percentile,
                     "upper_n_trials": self.upper_n_trials,
                     "epsilon_resample": self.epsilon_resample,
+                    "epsilon_resample_per_param": self.epsilon_resample_per_param,
                     "total_trials": self.total_trials,
                     "trials": [
                         {
@@ -409,6 +424,7 @@ class PBT:
         self.upper_n_trials = data.get("upper_n_trials", None)
         self.total_trials = data["total_trials"]
         self.epsilon_resample = data["epsilon_resample"]
+        self.epsilon_resample_per_param = data.get("epsilon_resample_per_param", 0.0)
         self.set_of_trials = dict()
         for trial_data in data["trials"]:
             trial_i = Trial(
